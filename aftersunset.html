@@ -43,10 +43,10 @@ button {
 }
 
 input[type=range].vertical {
-  writing-mode: bt-lr;
-  -webkit-appearance: slider-vertical;
-  width: 20px;
-  height: 140px;
+  transform: rotate(-90deg);
+  width: 140px;
+  height: 20px;
+  margin: 60px 0;
 }
 
 label {
@@ -79,6 +79,13 @@ label {
   color: black;
   border-color: #d4ac0d;
 }
+  
+  .smallbtn.solo-muted {
+  background: #2ecc71;
+  opacity: 0.6;
+  color: white;
+  border-color: #27ae60;
+}
 </style>
 </head>
 
@@ -93,13 +100,6 @@ label {
 
   <button onclick="playAll()">Play</button>
   <button onclick="pauseAll()">Pause</button>
-
-  <br><br>
-
-  <label>Master Volume</label><br>
-  <input type="range" id="master"
-         min="0" max="1" step="0.01" value="1"
-         oninput="setMaster(this.value)">
 
   <br><br>
 
@@ -118,7 +118,8 @@ let tracks = [
   { name: "Alto", file: "asalto.mp3" },
   { name: "Tenor", file: "astenor.mp3" },
   { name: "Bass", file: "asbass.mp3" },
-  { name: "Piano", file: "aspiano.mp3" }
+  { name: "Piano", file: "aspiano.mp3" },
+  { name: "MASTER", file: null }
 ];
 
 let audioCtx;
@@ -136,6 +137,26 @@ function buildUI() {
 
   tracks.forEach((t, i) => {
 
+    if (t.name === "MASTER") {
+      const div = document.createElement("div");
+      div.className = "channel";
+
+      div.innerHTML = `
+        <label>MASTER</label>
+
+        <div class="fader">
+          <input type="range"
+            class="vertical"
+            min="0" max="1" step="0.01"
+            value="1"
+            oninput="setMaster(this.value)">
+        </div>
+      `;
+
+      mixer.appendChild(div);
+      return;
+    }
+    
     t.volume = 1;
     t.mute = false;
     t.solo = false;
@@ -154,8 +175,8 @@ function buildUI() {
           oninput="setVolume(${i}, this.value)">
       </div>
 
-    <button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">M</button>
-    <button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">S</button>
+      <button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">M</button>
+      <button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">S</button>
     `;
 
     mixer.appendChild(div);
@@ -204,6 +225,7 @@ function updateMix() {
 
     t.gain.gain.value = level;
   });
+  updateButtonUI();
 }
 
 function setVolume(i, v) {
@@ -218,6 +240,7 @@ function toggleMute(i) {
   btn.classList.toggle("muted", tracks[i].mute);
 
   updateMix();
+  updateButtonUI();
 }
 
 function toggleSolo(i) {
@@ -227,10 +250,13 @@ function toggleSolo(i) {
   btn.classList.toggle("solo", tracks[i].solo);
 
   updateMix();
+  updateButtonUI();
 }
 
 function setMaster(v) {
-  if (masterGain) masterGain.gain.value = v;
+  if (masterGain) {
+    masterGain.gain.value = parseFloat(v);
+  }
 }
 
 function playAll() {
@@ -267,6 +293,27 @@ function updateScrubber() {
 
   requestAnimationFrame(updateScrubber);
 }
+  
+function updateButtonUI() {
+  const anySolo = tracks.some(t => t.solo);
+
+  tracks.forEach((t, i) => {
+    const muteBtn = document.getElementById(`mute-${i}`);
+
+    if (!muteBtn) return;
+
+    muteBtn.classList.remove("muted", "solo-muted");
+
+    if (t.mute) {
+      muteBtn.classList.add("muted");
+      return;
+    }
+
+    if (anySolo && !t.solo) {
+      muteBtn.classList.add("solo-muted");
+    }
+  });
+}
 
 function seekAll(v) {
   if (!audioCtx) return;
@@ -282,6 +329,7 @@ function seekAll(v) {
   if (isPlaying) {
     startTime = audioCtx.currentTime - t;
   }
+  
 }
 
 </script>

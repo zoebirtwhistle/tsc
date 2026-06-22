@@ -165,8 +165,9 @@ function buildUI() {
             min="0" max="1" step="0.01"
             value="1"
             oninput="setMaster(this.value)">
-        </div>
-        <canvas id="vu-${i}" width="10" height="120"></canvas>
+<div style="margin-top:20px;">
+  <canvas id="masterVu" width="300" height="20"></canvas>
+</div>
       `;
 
       mixer.appendChild(div);
@@ -229,6 +230,15 @@ function initAudio() {
     audio.addEventListener("loadedmetadata", () => {
       duration = Math.max(duration, audio.duration);
       document.getElementById("scrubber").max = duration;
+
+    const masterAnalyser = audioCtx.createAnalyser();
+masterAnalyser.fftSize = 1024;
+
+masterGain.connect(masterAnalyser);
+masterAnalyser.connect(audioCtx.destination);
+
+window.masterAnalyser = masterAnalyser;
+      
     });
   });
 }
@@ -298,6 +308,7 @@ function playAll() {
   isPlaying = true;
   updateScrubber();
   drawVUMeters();
+  drawMasterVU();
 }
 
 function pauseAll() {
@@ -367,6 +378,32 @@ function drawVUMeters() {
   });
 
   requestAnimationFrame(drawVUMeters);
+}
+
+function drawMasterVU() {
+  if (!window.masterAnalyser) return;
+
+  const canvas = document.getElementById("masterVu");
+  if (!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+
+  const data = new Uint8Array(masterAnalyser.frequencyBinCount);
+  masterAnalyser.getByteFrequencyData(data);
+
+  const avg = data.reduce((a, b) => a + b, 0) / data.length;
+  const level = avg / 255;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle =
+    level > 0.8 ? "#e74c3c" :
+    level > 0.5 ? "#f1c40f" :
+                  "#2ecc71";
+
+  ctx.fillRect(0, 0, level * canvas.width, canvas.height);
+
+  requestAnimationFrame(drawMasterVU);
 }
   
 function seekAll(v) {

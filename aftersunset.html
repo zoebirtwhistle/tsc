@@ -41,9 +41,9 @@ button {
 
 .channel {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  width: 80px;
+  gap: 10px;
+  margin: 10px;
 }
 
 .fader {
@@ -51,6 +51,18 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.fader-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+ .vu {
+  width: 12px;
+  height: 140px;
+  background: #222;
 }
 
 input[type=range].vertical {
@@ -158,17 +170,23 @@ function buildUI() {
 
       div.innerHTML = `
         <label>MASTER</label>
+ <div class="fader-col">
 
-        <div class="fader">
-          <input type="range"
-            class="vertical"
-            min="0" max="1" step="0.01"
-            value="1"
-            oninput="setMaster(this.value)">
-<div style="margin-top:20px;">
-  <canvas id="masterVu" width="300" height="20"></canvas>
-</div>
-      `;
+    <label>${t.name}</label>
+
+    <input type="range"
+      class="vertical"
+      min="0" max="1" step="0.01"
+      value="1"
+      oninput="setVolume(${i}, this.value)">
+
+    <button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">M</button>
+    <button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">S</button>
+
+  </div>
+
+  <canvas id="masterVu" width="12" height="140"></canvas>
+`;
 
       mixer.appendChild(div);
       return;
@@ -184,19 +202,23 @@ function buildUI() {
     div.innerHTML = `
       <label>${t.name}</label>
 
-<div class="fader">
-  <input type="range"
-    class="vertical"
-    min="0" max="1" step="0.01"
-    value="1"
-    oninput="setVolume(${i}, this.value)">
-</div>
+ <div class="fader-col">
 
-<canvas id="vu-${i}" width="10" height="120"></canvas>
+    <label>${t.name}</label>
 
-<button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">M</button>
-<button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">S</button>
-    `;
+    <input type="range"
+      class="vertical"
+      min="0" max="1" step="0.01"
+      value="1"
+      oninput="setVolume(${i}, this.value)">
+
+    <button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">M</button>
+    <button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">S</button>
+
+  </div>
+
+  <canvas id="vu-${i}" class="vu" width="12" height="140"></canvas>
+`;
 
     mixer.appendChild(div);
   });
@@ -353,6 +375,7 @@ function updateButtonUI() {
   
 function drawVUMeters() {
   tracks.forEach((t, i) => {
+
     if (!t.analyser) return;
 
     const canvas = document.getElementById(`vu-${i}`);
@@ -360,17 +383,26 @@ function drawVUMeters() {
 
     const ctx = canvas.getContext("2d");
 
-    const data = new Uint8Array(t.analyser.frequencyBinCount);
-    t.analyser.getByteFrequencyData(data);
+    const data = new Uint8Array(t.analyser.fftSize);
+    t.analyser.getByteTimeDomainData(data);
 
-    const avg = data.reduce((a, b) => a + b, 0) / data.length;
-    const level = avg / 255;
+    let sum = 0;
+
+    for (let j = 0; j < data.length; j++) {
+      const v = (data[j] - 128) / 128;
+      sum += v * v;
+    }
+
+    const rms = Math.sqrt(sum / data.length);
+
+    const level = Math.min(rms * 3.5, 1);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = level > 0.7 ? "#e74c3c"
-                  : level > 0.4 ? "#f1c40f"
-                  : "#2ecc71";
+    ctx.fillStyle =
+      level > 0.8 ? "#e74c3c" :
+      level > 0.5 ? "#f1c40f" :
+                    "#2ecc71";
 
     const h = level * canvas.height;
 
@@ -388,23 +420,32 @@ function drawMasterVU() {
 
   const ctx = canvas.getContext("2d");
 
-  const data = new Uint8Array(masterAnalyser.frequencyBinCount);
-  masterAnalyser.getByteFrequencyData(data);
+  const data = new Uint8Array(masterAnalyser.fftSize);
+  masterAnalyser.getByteTimeDomainData(data);
 
-  const avg = data.reduce((a, b) => a + b, 0) / data.length;
-  const level = avg / 255;
+  let sum = 0;
+
+  for (let i = 0; i < data.length; i++) {
+    const v = (data[i] - 128) / 128;
+    sum += v * v;
+  }
+
+  const rms = Math.sqrt(sum / data.length);
+
+  const level = Math.min(rms * 3.5, 1);
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   ctx.fillStyle =
-    level > 0.8 ? "#e74c3c" :
-    level > 0.5 ? "#f1c40f" :
-                  "#2ecc71";
+    level > 0.85 ? "#e74c3c" :
+    level > 0.55 ? "#f1c40f" :
+                   "#2ecc71";
 
   ctx.fillRect(0, 0, level * canvas.width, canvas.height);
 
   requestAnimationFrame(drawMasterVU);
 }
+
   
 function seekAll(v) {
   if (!audioCtx) return;

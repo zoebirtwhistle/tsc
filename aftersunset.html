@@ -126,7 +126,7 @@ label {
 <body>
 
 <p><a href="index.html"><b><--- Back</b></a></p>
-<h1>Ethel Smyth – After Sunset</h1>
+<h1>Ethel Smyth – <i>After Sunset</i></h1>
 
 <a href="Smyth - After Sunset SATB Vocal Score.pdf">Download score</a>
 
@@ -187,7 +187,7 @@ function buildUI() {
         <div class="strip-row">
         <div class="fader-col">
 
-          <label>MASTER</label>
+          <label>Master volume</label>
 
           <input type="range"
             class="vertical"
@@ -195,8 +195,6 @@ function buildUI() {
             value="1"
             oninput="setMaster(this.value)">
 
-       
-        <canvas id="masterVu" class="vu" width="12" height="140"></canvas>
         </div>
         </div>
       `;

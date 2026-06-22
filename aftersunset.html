@@ -16,7 +16,12 @@ body {
   margin: 20px 0;
 }
 
-.scrubber-block {
+#scrubber {
+  width: 100%;
+  max-width: 600px;
+}
+  
+  .scrubber-block {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -191,9 +196,9 @@ function buildUI() {
             oninput="setMaster(this.value)">
 
        
-
         <canvas id="masterVu" class="vu" width="12" height="140"></canvas>
-         </div>
+        </div>
+        </div>
       `;
 
       mixer.appendChild(div);

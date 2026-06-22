@@ -21,9 +21,10 @@ body {
   max-width: 600px;
 }  
 
- .scrubber-wrap {
+.scrubber-block {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   margin-top: 10px;
 }
   
@@ -92,12 +93,11 @@ label {
 }
 
 .smallbtn {
-  width: 40px;
-  margin-top: 5px;
-  font-size: 12px;
-  background: #eee;
-  border: 1px solid #aaa;
-  cursor: pointer;
+  width: 60px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .smallbtn.muted {
@@ -135,7 +135,7 @@ label {
 
   <br><br>
 
-<div class="scrubber-wrap">
+<div class="scrubber-block">
   <label>Playback Position</label><br>
   <input type="range" id="scrubber"
          min="0" max="1" step="0.01" value="0"

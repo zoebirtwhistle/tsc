@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>The Shepherd</title>
+
 <style>
   body {
     font-family: sans-serif;
@@ -35,11 +36,11 @@
 </head>
 
 <body>
-<p></p><a href="index.html">Back</a></p>
+
+<p><a href="index.html">Back</a></p>
 <h1>Avril Coleridge-Taylor – <i>The Shepherd</i></h1>
 
-  <div class="controls">
-
+<div class="controls">
   <button onclick="playAll()">Play</button>
   <button onclick="pauseAll()">Pause</button>
 
@@ -52,10 +53,10 @@
   <br><br>
 
   <label>Playback Position</label>
-<input type="range" id="scrubber" min="0" max="120" step="0.01" value="0"
-       oninput="seekAll(this.value)">
+  <input type="range" id="scrubber" min="0" max="1" step="0.01" value="0"
+         oninput="seekAll(this.value)">
 </div>
-  
+
 <div id="mixer"></div>
 
 <script>
@@ -75,6 +76,7 @@ let masterGain;
 let isPlaying = false;
 let startTime = 0;
 let pauseTime = 0;
+let duration = 0;
 
 // --------------------
 // UI BUILDS IMMEDIATELY
@@ -82,9 +84,7 @@ let pauseTime = 0;
 window.addEventListener("DOMContentLoaded", buildUI);
 
 function buildUI() {
-  tracks.forEach((track, i) => {
-    createFader(track.name, i);
-  });
+  tracks.forEach((t, i) => createFader(t.name, i));
 }
 
 // --------------------
@@ -98,7 +98,11 @@ function initAudio() {
 
   tracks.forEach((track, i) => {
     const audio = new Audio(track.file);
-    audio.crossOrigin = "anonymous";
+
+    audio.addEventListener("loadedmetadata", () => {
+      duration = Math.max(duration, audio.duration);
+      document.getElementById("scrubber").max = duration;
+    });
 
     const source = audioCtx.createMediaElementSource(audio);
     const gainNode = audioCtx.createGain();
@@ -115,31 +119,27 @@ function initAudio() {
 // FADERS
 // --------------------
 function createFader(name, index) {
-  const container = document.createElement("div");
-  container.className = "channel";
+  const div = document.createElement("div");
+  div.className = "channel";
 
-  container.innerHTML = `
+  div.innerHTML = `
     <label>${name}</label>
     <input type="range" min="0" max="1" step="0.01" value="1"
       oninput="setGain(${index}, this.value)">
   `;
 
-  document.getElementById("mixer").appendChild(container);
+  document.getElementById("mixer").appendChild(div);
 }
 
-function setGain(index, value) {
-  if (gains[index]) {
-    gains[index].gain.value = value;
-  }
+function setGain(i, v) {
+  if (gains[i]) gains[i].gain.value = v;
 }
 
 // --------------------
 // MASTER VOLUME
 // --------------------
-function setMaster(value) {
-  if (masterGain) {
-    masterGain.gain.value = value;
-  }
+function setMaster(v) {
+  if (masterGain) masterGain.gain.value = v;
 }
 
 // --------------------
@@ -147,6 +147,7 @@ function setMaster(value) {
 // --------------------
 function playAll() {
   if (!audioCtx) initAudio();
+
   audioCtx.resume();
 
   const offset = pauseTime || 0;
@@ -169,7 +170,7 @@ function pauseAll() {
 }
 
 // --------------------
-// SCRUBBER (FIXED)
+// SCRUBBER]
 // --------------------
 function updateScrubber() {
   if (!isPlaying) return;
@@ -178,22 +179,24 @@ function updateScrubber() {
 
   const current = audioCtx.currentTime - startTime;
 
-  scrubber.value = current;
+  scrubber.value = Math.min(current, duration);
 
   requestAnimationFrame(updateScrubber);
 }
 
-function seekAll(value) {
+function seekAll(v) {
   if (!audioCtx) return;
 
-  pauseTime = parseFloat(value);
+  const t = parseFloat(v);
+
+  pauseTime = t;
 
   audioEls.forEach(a => {
-    a.currentTime = pauseTime;
+    a.currentTime = t;
   });
 
   if (isPlaying) {
-    startTime = audioCtx.currentTime - pauseTime;
+    startTime = audioCtx.currentTime - t;
   }
 }
 </script>

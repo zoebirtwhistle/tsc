@@ -16,6 +16,17 @@ body {
   margin: 20px 0;
 }
 
+#scrubber {
+  width: 100%;
+  max-width: 600px;
+}  
+
+ .scrubber-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+  
 button {
   padding: 10px 14px;
   margin: 5px;
@@ -103,10 +114,13 @@ label {
 
   <br><br>
 
+<div class="scrubber-wrap">
   <label>Playback Position</label><br>
   <input type="range" id="scrubber"
          min="0" max="1" step="0.01" value="0"
          oninput="seekAll(this.value)">
+</div>
+  
 </div>
 
 <div id="mixer"></div>
@@ -114,12 +128,13 @@ label {
 <script>
 
 let tracks = [
+  { name: "Master", file: null },
   { name: "Soprano", file: "assop.mp3" },
   { name: "Alto", file: "asalto.mp3" },
   { name: "Tenor", file: "astenor.mp3" },
   { name: "Bass", file: "asbass.mp3" },
-  { name: "Piano", file: "aspiano.mp3" },
-  { name: "MASTER", file: null }
+  { name: "Piano", file: "aspiano.mp3" }
+  
 ];
 
 let audioCtx;
@@ -151,6 +166,7 @@ function buildUI() {
             value="1"
             oninput="setMaster(this.value)">
         </div>
+        <canvas id="vu-${i}" width="10" height="120"></canvas>
       `;
 
       mixer.appendChild(div);
@@ -167,16 +183,18 @@ function buildUI() {
     div.innerHTML = `
       <label>${t.name}</label>
 
-      <div class="fader">
-        <input type="range"
-          class="vertical"
-          min="0" max="1" step="0.01"
-          value="1"
-          oninput="setVolume(${i}, this.value)">
-      </div>
+<div class="fader">
+  <input type="range"
+    class="vertical"
+    min="0" max="1" step="0.01"
+    value="1"
+    oninput="setVolume(${i}, this.value)">
+</div>
 
-      <button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">M</button>
-      <button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">S</button>
+<canvas id="vu-${i}" width="10" height="120"></canvas>
+
+<button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">M</button>
+<button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">S</button>
     `;
 
     mixer.appendChild(div);
@@ -196,11 +214,17 @@ function initAudio() {
     const source = audioCtx.createMediaElementSource(audio);
     const gain = audioCtx.createGain();
 
+
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    
     t.audio = audio;
     t.gain = gain;
+    t.analyser = analyser;
 
     source.connect(gain);
-    gain.connect(masterGain);
+    gain.connect(analyser);
+    analyser.connect(masterGain);
 
     audio.addEventListener("loadedmetadata", () => {
       duration = Math.max(duration, audio.duration);
@@ -273,6 +297,7 @@ function playAll() {
 
   isPlaying = true;
   updateScrubber();
+  drawVUMeters();
 }
 
 function pauseAll() {
@@ -314,7 +339,36 @@ function updateButtonUI() {
     }
   });
 }
+  
+function drawVUMeters() {
+  tracks.forEach((t, i) => {
+    if (!t.analyser) return;
 
+    const canvas = document.getElementById(`vu-${i}`);
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+
+    const data = new Uint8Array(t.analyser.frequencyBinCount);
+    t.analyser.getByteFrequencyData(data);
+
+    const avg = data.reduce((a, b) => a + b, 0) / data.length;
+    const level = avg / 255;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = level > 0.7 ? "#e74c3c"
+                  : level > 0.4 ? "#f1c40f"
+                  : "#2ecc71";
+
+    const h = level * canvas.height;
+
+    ctx.fillRect(0, canvas.height - h, canvas.width, h);
+  });
+
+  requestAnimationFrame(drawVUMeters);
+}
+  
 function seekAll(v) {
   if (!audioCtx) return;
 

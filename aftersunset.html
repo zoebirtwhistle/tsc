@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>After Sunset</title>
+<title>After Sunset – Mixer</title>
 
 <style>
 body {
@@ -53,11 +53,31 @@ label {
   font-size: 14px;
   margin-bottom: 5px;
 }
+.smallbtn {
+  width: 40px;
+  margin-top: 5px;
+  font-size: 12px;
+}
 
 .smallbtn {
   width: 40px;
   margin-top: 5px;
   font-size: 12px;
+  background: #eee;
+  border: 1px solid #aaa;
+  cursor: pointer;
+}
+
+.smallbtn.muted {
+  background: #2ecc71;
+  color: white;
+  border-color: #27ae60;
+}
+
+.smallbtn.solo {
+  background: #f1c40f;
+  color: black;
+  border-color: #d4ac0d;
 }
 </style>
 </head>
@@ -134,8 +154,8 @@ function buildUI() {
           oninput="setVolume(${i}, this.value)">
       </div>
 
-      <button class="smallbtn" onclick="toggleMute(${i})">M</button>
-      <button class="smallbtn" onclick="toggleSolo(${i})">S</button>
+    <button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">M</button>
+    <button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">S</button>
     `;
 
     mixer.appendChild(div);
@@ -193,11 +213,19 @@ function setVolume(i, v) {
 
 function toggleMute(i) {
   tracks[i].mute = !tracks[i].mute;
+
+  const btn = document.getElementById(`mute-${i}`);
+  btn.classList.toggle("muted", tracks[i].mute);
+
   updateMix();
 }
 
 function toggleSolo(i) {
   tracks[i].solo = !tracks[i].solo;
+
+  const btn = document.getElementById(`solo-${i}`);
+  btn.classList.toggle("solo", tracks[i].solo);
+
   updateMix();
 }
 
@@ -256,238 +284,6 @@ function seekAll(v) {
   }
 }
 
-</script>
-
-</body>
-</html><!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>After Sunset</title>
-
-<style>
-  body {
-    font-family: sans-serif;
-    max-width: 800px;
-    margin: 40px auto;
-  }
-
-  .channel {
-    margin-bottom: 20px;
-  }
-
-  label {
-    display: block;
-    margin-bottom: 5px;
-  }
-
-  input[type=range] {
-    width: 100%;
-  }
-
-  .controls {
-    margin: 20px 0;
-  }
-
-  button {
-    padding: 10px 15px;
-    margin-right: 10px;
-  }
-</style>
-</head>
-
-<body>
-
-<p><b><a href="index.html">Back</a></b></p>
-<h1>Ethel Smyth – <i>After Sunset</i></h1>
-<a href="Smyth - After Sunset SATB Vocal Score.pdf">Download score</a>
-<div class="controls">
-  <button onclick="playAll()">Play</button>
-  <button onclick="pauseAll()">Pause</button>
- 
-  <br><br>
-
-  <label>Master volume</label>
-  <input type="range" id="master" min="0" max="1" step="0.01" value="1"
-         oninput="setMaster(this.value)">
-
-  <br><br>
-
-  <label>Playback position</label>
-  <input type="range" id="scrubber" min="0" max="1" step="0.01" value="0"
-         oninput="seekAll(this.value)">
-</div>
-
-<div id="mixer"></div>
-
-<script>
-const tracks = [
-  { name: "Soprano", file: "assop.mp3" },
-  { name: "Alto", file: "asalto.mp3" },
-  { name: "Tenor", file: "astenor.mp3" },
-  { name: "Bass", file: "asbass.mp3" },
-  { name: "Piano", file: "aspiano.mp3" }
-];
-
-let audioCtx;
-let audioEls = [];
-let gains = [];
-let masterGain;
-
-let isPlaying = false;
-let startTime = 0;
-let pauseTime = 0;
-let duration = 0;
-
-let muteStates = [];
-let soloStates = [];
-
-window.addEventListener("DOMContentLoaded", buildUI);
-
-function buildUI() {
-  tracks.forEach((t, i) => createFader(t.name, i));
-  muteStates = Array(tracks.length).fill(false);
-  soloStates = Array(tracks.length).fill(false);
-}
-
-function initAudio() {
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-  masterGain = audioCtx.createGain();
-  masterGain.connect(audioCtx.destination);
-
-  tracks.forEach((track, i) => {
-    const audio = new Audio(track.file);
-
-    audio.addEventListener("loadedmetadata", () => {
-      duration = Math.max(duration, audio.duration);
-      document.getElementById("scrubber").max = duration;
-    });
-
-    const source = audioCtx.createMediaElementSource(audio);
-    const gainNode = audioCtx.createGain();
-
-    gainNode.userVolume = 1;
-
-    source.connect(gainNode);
-    gainNode.connect(masterGain);
-
-    audioEls.push(audio);
-    gains.push(gainNode);
-  });
-}
-
-function createFader(name, index) {
-  const div = document.createElement("div");
-  div.className = "channel";
-
-  div.innerHTML = `
-    <label>${name} volume</label>
-
-    <input type="range" min="0" max="1" step="0.01" value="1"
-      oninput="setGain(${index}, this.value)">
-
-    <button onclick="toggleMute(${index})" id="mute-${index}">
-      Mute
-    </button>
-
-    <button onclick="toggleSolo(${index})" id="solo-${index}">
-      Solo
-    </button>
-  `;
-
-  document.getElementById("mixer").appendChild(div);
-}
-
-function setGain(i, v) {
-  gains[i].userVolume = parseFloat(v);
-  updateMix();
-}
-
-function updateMix() {
-  const anySolo = soloStates.some(Boolean);
-
-  gains.forEach((gainNode, i) => {
-
-    let level = gainNode.userVolume ?? 1;
-
-    if (anySolo) {
-      level = soloStates[i] ? level : 0;
-    }
-
-    if (muteStates[i]) {
-      level = 0;
-    }
-
-    gainNode.gain.value = level;
-  });
-}  
-
-function setMaster(v) {
-  if (masterGain) masterGain.gain.value = v;
-}
-
-function playAll() {
-  if (!audioCtx) initAudio();
-
-  audioCtx.resume();
-
-  const offset = pauseTime || 0;
-  startTime = audioCtx.currentTime - offset;
-
-  audioEls.forEach(a => {
-    a.currentTime = offset;
-    a.play();
-  });
-
-  isPlaying = true;
-  updateScrubber();
-}
-
-function pauseAll() {
-  audioEls.forEach(a => a.pause());
-
-  pauseTime = audioCtx.currentTime - startTime;
-  isPlaying = false;
-}
-
-  function toggleMute(i) {
-  muteStates[i] = !muteStates[i];
-  updateMix();
-}
-
-function toggleSolo(i) {
-  soloStates[i] = !soloStates[i];
-  updateMix();
-}
-  
-function updateScrubber() {
-  if (!isPlaying) return;
-
-  const scrubber = document.getElementById("scrubber");
-
-  const current = audioCtx.currentTime - startTime;
-
-  scrubber.value = Math.min(current, duration);
-
-  requestAnimationFrame(updateScrubber);
-}
-
-function seekAll(v) {
-  if (!audioCtx) return;
-
-  const t = parseFloat(v);
-
-  pauseTime = t;
-
-  audioEls.forEach(a => {
-    a.currentTime = t;
-  });
-
-  if (isPlaying) {
-    startTime = audioCtx.currentTime - t;
-  }
-}
 </script>
 
 </body>

@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>After Sunset</title>
+<title>The Shepherd</title>
 <style>
   body {
     font-family: sans-serif;
@@ -36,7 +36,7 @@
 
 <body>
 <p></p><a href="index.html">Back</a></p>
-<h1>Avril Coleridge-Taylor – <i>The Shepherd</i>i></h1>
+<h1>Avril Coleridge-Taylor – <i>The Shepherd</i></h1>
 
   <div class="controls">
 
@@ -52,35 +52,50 @@
   <br><br>
 
   <label>Playback Position</label>
-  <input type="range" id="scrubber" min="0" max="1000" value="0"
-         oninput="seekAll(this.value)">
+<input type="range" id="scrubber" min="0" max="120" step="0.01" value="0"
+       oninput="seekAll(this.value)">
 </div>
   
 <div id="mixer"></div>
 
 <script>
 const tracks = [
-  { name: "Soprano", file: "tssop1.mp3" },
-  { name: "Alto", file: "tsalto1.mp3" },
-  { name: "Tenor", file: "tstenor1.mp3" },
-  { name: "Bass", file: "tsbass1.mp3" },
-  { name: "Piano", file: "tspiano.mp3" }
+  { name: "Soprano", file: "assop.mp3" },
+  { name: "Alto", file: "asalto.mp3" },
+  { name: "Tenor", file: "astenor.mp3" },
+  { name: "Bass", file: "asbass.mp3" },
+  { name: "Piano", file: "aspiano.mp3" }
 ];
 
 let audioCtx;
-let sources = [];
+let audioEls = [];
 let gains = [];
 let masterGain;
-let duration = 0;
+
 let isPlaying = false;
 let startTime = 0;
 let pauseTime = 0;
 
+// --------------------
+// UI BUILDS IMMEDIATELY
+// --------------------
+window.addEventListener("DOMContentLoaded", buildUI);
+
+function buildUI() {
+  tracks.forEach((track, i) => {
+    createFader(track.name, i);
+  });
+}
+
+// --------------------
+// AUDIO INIT
+// --------------------
 function initAudio() {
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
   masterGain = audioCtx.createGain();
   masterGain.connect(audioCtx.destination);
-  
+
   tracks.forEach((track, i) => {
     const audio = new Audio(track.file);
     audio.crossOrigin = "anonymous";
@@ -91,36 +106,14 @@ function initAudio() {
     source.connect(gainNode);
     gainNode.connect(masterGain);
 
-    sources.push(audio);
+    audioEls.push(audio);
     gains.push(gainNode);
-
-    createFader(track.name, i);
   });
 }
-function setMaster(value) {
-  if (masterGain) {
-    masterGain.gain.value = value;
-  }
-}
 
-function playAll() {
-  if (!audioCtx) initAudio();
-
-  audioCtx.resume();
-
-  const offset = pauseTime || 0;
-  startTime = audioCtx.currentTime - offset;
-
-  sources.forEach(audio => {
-    audio.currentTime = offset;
-    audio.play();
-  });
-
-  isPlaying = true;
-  updateScrubber();
-}
-
-  
+// --------------------
+// FADERS
+// --------------------
 function createFader(name, index) {
   const container = document.createElement("div");
   container.className = "channel";
@@ -135,50 +128,74 @@ function createFader(name, index) {
 }
 
 function setGain(index, value) {
-  gains[index].gain.value = value;
+  if (gains[index]) {
+    gains[index].gain.value = value;
+  }
 }
 
-  function updateScrubber() {
+// --------------------
+// MASTER VOLUME
+// --------------------
+function setMaster(value) {
+  if (masterGain) {
+    masterGain.gain.value = value;
+  }
+}
+
+// --------------------
+// PLAYBACK
+// --------------------
+function playAll() {
+  if (!audioCtx) initAudio();
+  audioCtx.resume();
+
+  const offset = pauseTime || 0;
+  startTime = audioCtx.currentTime - offset;
+
+  audioEls.forEach(a => {
+    a.currentTime = offset;
+    a.play();
+  });
+
+  isPlaying = true;
+  updateScrubber();
+}
+
+function pauseAll() {
+  audioEls.forEach(a => a.pause());
+
+  pauseTime = audioCtx.currentTime - startTime;
+  isPlaying = false;
+}
+
+// --------------------
+// SCRUBBER (FIXED)
+// --------------------
+function updateScrubber() {
   if (!isPlaying) return;
 
   const scrubber = document.getElementById("scrubber");
 
   const current = audioCtx.currentTime - startTime;
 
-  scrubber.value = current * 100;
+  scrubber.value = current;
 
   requestAnimationFrame(updateScrubber);
 }
 
-  function seekAll(value) {
+function seekAll(value) {
   if (!audioCtx) return;
 
-  const time = value / 100;
+  pauseTime = parseFloat(value);
 
-  pauseTime = time;
-
-  sources.forEach(audio => {
-    audio.currentTime = time;
+  audioEls.forEach(a => {
+    a.currentTime = pauseTime;
   });
 
   if (isPlaying) {
-    startTime = audioCtx.currentTime - time;
+    startTime = audioCtx.currentTime - pauseTime;
   }
 }
-
-function playAll() {
-  if (!audioCtx) initAudio();
-  audioCtx.resume();
-  sources.forEach(a => a.play());
-}
-
-function pauseAll() {
-  sources.forEach(audio => audio.pause());
-
-  pauseTime = audioCtx.currentTime - startTime;
-  isPlaying = false;
-}
-  
 </script>
 
 </body>

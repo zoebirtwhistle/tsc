@@ -43,6 +43,24 @@
   <button onclick="pauseAll()">Pause</button>
 </div>
 
+  <div class="controls">
+
+  <button onclick="playAll()">Play</button>
+  <button onclick="pauseAll()">Pause</button>
+
+  <br><br>
+
+  <label>Master Volume</label>
+  <input type="range" id="master" min="0" max="1" step="0.01" value="1"
+         oninput="setMaster(this.value)">
+
+  <br><br>
+
+  <label>Playback Position</label>
+  <input type="range" id="scrubber" min="0" max="1000" value="0"
+         oninput="seekAll(this.value)">
+</div>
+  
 <div id="mixer"></div>
 
 <script>
@@ -57,10 +75,17 @@ const tracks = [
 let audioCtx;
 let sources = [];
 let gains = [];
+let masterGain;
+let duration = 0;
+let isPlaying = false;
+let startTime = 0;
+let pauseTime = 0;
 
 function initAudio() {
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
+  masterGain = audioCtx.createGain();
+  masterGain.connect(audioCtx.destination);
+  
   tracks.forEach((track, i) => {
     const audio = new Audio(track.file);
     audio.crossOrigin = "anonymous";
@@ -69,7 +94,7 @@ function initAudio() {
     const gainNode = audioCtx.createGain();
 
     source.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
+    gainNode.connect(masterGain);
 
     sources.push(audio);
     gains.push(gainNode);
@@ -77,7 +102,30 @@ function initAudio() {
     createFader(track.name, i);
   });
 }
+function setMaster(value) {
+  if (masterGain) {
+    masterGain.gain.value = value;
+  }
+}
 
+function playAll() {
+  if (!audioCtx) initAudio();
+
+  audioCtx.resume();
+
+  const offset = pauseTime || 0;
+  startTime = audioCtx.currentTime - offset;
+
+  sources.forEach(audio => {
+    audio.currentTime = offset;
+    audio.play();
+  });
+
+  isPlaying = true;
+  updateScrubber();
+}
+
+  
 function createFader(name, index) {
   const container = document.createElement("div");
   container.className = "channel";
@@ -95,6 +143,34 @@ function setGain(index, value) {
   gains[index].gain.value = value;
 }
 
+  function updateScrubber() {
+  if (!isPlaying) return;
+
+  const scrubber = document.getElementById("scrubber");
+
+  const current = audioCtx.currentTime - startTime;
+
+  scrubber.value = current * 100;
+
+  requestAnimationFrame(updateScrubber);
+}
+
+  function seekAll(value) {
+  if (!audioCtx) return;
+
+  const time = value / 100;
+
+  pauseTime = time;
+
+  sources.forEach(audio => {
+    audio.currentTime = time;
+  });
+
+  if (isPlaying) {
+    startTime = audioCtx.currentTime - time;
+  }
+}
+
 function playAll() {
   if (!audioCtx) initAudio();
   audioCtx.resume();
@@ -102,8 +178,12 @@ function playAll() {
 }
 
 function pauseAll() {
-  sources.forEach(a => a.pause());
+  sources.forEach(audio => audio.pause());
+
+  pauseTime = audioCtx.currentTime - startTime;
+  isPlaying = false;
 }
+  
 </script>
 
 </body>

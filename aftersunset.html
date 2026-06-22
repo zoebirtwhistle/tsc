@@ -78,10 +78,15 @@ let startTime = 0;
 let pauseTime = 0;
 let duration = 0;
 
+let muteStates = [];
+let soloStates = [];
+
 window.addEventListener("DOMContentLoaded", buildUI);
 
 function buildUI() {
   tracks.forEach((t, i) => createFader(t.name, i));
+  muteStates = Array(tracks.length).fill(false);
+  soloStates = Array(tracks.length).fill(false);
 }
 
 function initAudio() {
@@ -101,6 +106,8 @@ function initAudio() {
     const source = audioCtx.createMediaElementSource(audio);
     const gainNode = audioCtx.createGain();
 
+    gainNode.userVolume = 1;
+
     source.connect(gainNode);
     gainNode.connect(masterGain);
 
@@ -115,16 +122,45 @@ function createFader(name, index) {
 
   div.innerHTML = `
     <label>${name} volume</label>
+
     <input type="range" min="0" max="1" step="0.01" value="1"
       oninput="setGain(${index}, this.value)">
+
+    <button onclick="toggleMute(${index})" id="mute-${index}">
+      Mute
+    </button>
+
+    <button onclick="toggleSolo(${index})" id="solo-${index}">
+      Solo
+    </button>
   `;
 
   document.getElementById("mixer").appendChild(div);
 }
 
 function setGain(i, v) {
-  if (gains[i]) gains[i].gain.value = v;
+  gains[i].userVolume = parseFloat(v);
+  updateMix();
 }
+
+function updateMix() {
+  const anySolo = soloStates.some(Boolean);
+
+  gains.forEach((gainNode, i) => {
+
+    let level = gainNode.userVolume ?? 1;
+
+    if (anySolo) {
+      level = soloStates[i] ? level : 0;
+    }
+
+    if (muteStates[i]) {
+      level = 0;
+    }
+
+    gainNode.gain.value = level;
+  });
+}  
 
 function setMaster(v) {
   if (masterGain) masterGain.gain.value = v;
@@ -154,6 +190,16 @@ function pauseAll() {
   isPlaying = false;
 }
 
+  function toggleMute(i) {
+  muteStates[i] = !muteStates[i];
+  updateMix();
+}
+
+function toggleSolo(i) {
+  soloStates[i] = !soloStates[i];
+  updateMix();
+}
+  
 function updateScrubber() {
   if (!isPlaying) return;
 

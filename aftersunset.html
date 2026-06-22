@@ -12,18 +12,21 @@ body {
   text-align: center;
 }
 
+.controls {
+  margin: 20px 0;
+}
+
 #scrubber {
   width: 100%;
   max-width: 600px;
-}
+}  
 
-.scrubber-block {
+ .scrubber-wrap {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  justify-content: center;
   margin-top: 10px;
 }
-
+  
 button {
   padding: 10px 14px;
   margin: 5px;
@@ -36,7 +39,6 @@ button {
   margin-top: 30px;
 }
 
-/* CHANNEL STRIP */
 .channel {
   display: flex;
   flex-direction: column;
@@ -47,7 +49,14 @@ button {
 .strip-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+}
+
+.fader {
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .fader-col {
@@ -57,14 +66,14 @@ button {
   gap: 6px;
 }
 
-/* VU */
-.vu {
+ .vu {
   width: 12px;
   height: 140px;
   background: #222;
+  margin-left: 2px;
+  margin-right: 0;
 }
 
-/* FADER */
 input[type=range].vertical {
   transform: rotate(-90deg);
   width: 140px;
@@ -72,72 +81,81 @@ input[type=range].vertical {
   margin: 60px 0;
 }
 
-/* BUTTONS */
-.button-row {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
+label {
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+.smallbtn {
+  width: 40px;
+  margin-top: 5px;
+  font-size: 12px;
 }
 
 .smallbtn {
-  width: 60px;
-  height: 26px;
-  font-size: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 40px;
+  margin-top: 5px;
+  font-size: 12px;
+  background: #eee;
+  border: 1px solid #aaa;
+  cursor: pointer;
 }
 
-/* STATES */
 .smallbtn.muted {
   background: #2ecc71;
   color: white;
+  border-color: #27ae60;
 }
 
 .smallbtn.solo {
   background: #f1c40f;
   color: black;
+  border-color: #d4ac0d;
 }
-
-.smallbtn.solo-muted {
+  
+  .smallbtn.solo-muted {
   background: #2ecc71;
-  opacity: 0.5;
+  opacity: 0.6;
   color: white;
-}
-
-/* MASTER */
-.master-strip {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  border-color: #27ae60;
 }
 </style>
 </head>
 
 <body>
-<p><a href="index.html"><b>Home</b></a></p>
+
+<p><a href="index.html"><b><--- Back</b></a></p>
 <h1>Ethel Smyth – After Sunset</h1>
 
-<button onclick="playAll()">Play</button>
-<button onclick="pauseAll()">Pause</button>
+<a href="Smyth - After Sunset SATB Vocal Score.pdf">Download score</a>
 
-<div class="scrubber-block">
-  <label>Playback Position</label>
+<div class="controls">
+
+  <button onclick="playAll()">Play</button>
+  <button onclick="pauseAll()">Pause</button>
+
+  <br><br>
+
+<div class="scrubber-wrap">
+  <label>Playback Position</label><br>
   <input type="range" id="scrubber"
          min="0" max="1" step="0.01" value="0"
          oninput="seekAll(this.value)">
+</div>
+  
 </div>
 
 <div id="mixer"></div>
 
 <script>
 
-const tracks = [
+let tracks = [
+  { name: "Master", file: null },
   { name: "Soprano", file: "assop.mp3" },
   { name: "Alto", file: "asalto.mp3" },
   { name: "Tenor", file: "astenor.mp3" },
   { name: "Bass", file: "asbass.mp3" },
   { name: "Piano", file: "aspiano.mp3" }
+  
 ];
 
 let audioCtx;
@@ -150,65 +168,67 @@ let pauseTime = 0;
 
 window.addEventListener("DOMContentLoaded", buildUI);
 
-/* ---------------- UI ---------------- */
-
 function buildUI() {
   const mixer = document.getElementById("mixer");
 
-  // MASTER
-  const masterDiv = document.createElement("div");
-  masterDiv.className = "channel";
-
-  masterDiv.innerHTML = `
-    <div class="master-strip">
-
-      <label>MASTER</label>
-
-      <input type="range"
-        class="vertical"
-        min="0" max="1" step="0.01"
-        value="1"
-        oninput="setMaster(this.value)">
-
-      <canvas id="masterVu" class="vu"></canvas>
-
-    </div>
-  `;
-
-  mixer.appendChild(masterDiv);
-
-  // TRACKS
   tracks.forEach((t, i) => {
-
-    t.volume = 1;
-    t.mute = false;
-    t.solo = false;
 
     const div = document.createElement("div");
     div.className = "channel";
 
-    div.innerHTML = `
-      <div class="strip-row">
+    // -------------------
+    // MASTER STRIP
+    // -------------------
+    if (t.name === "MASTER") {
 
+      div.innerHTML = `
+        <div class="strip-row">
         <div class="fader-col">
 
-          <label>${t.name}</label>
+          <label>MASTER</label>
 
           <input type="range"
             class="vertical"
             min="0" max="1" step="0.01"
             value="1"
-            oninput="setVolume(${i}, this.value)">
+            oninput="setMaster(this.value)">
 
-          <div class="button-row">
-            <button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">Mute</button>
-            <button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">Solo</button>
-          </div>
+       
 
-        </div>
+        <canvas id="masterVu" class="vu" width="12" height="140"></canvas>
+         </div>
+      `;
 
-        <canvas id="vu-${i}" class="vu"></canvas>
+      mixer.appendChild(div);
+      return;
+    }
 
+    // -------------------
+    // NORMAL CHANNELS
+    // -------------------
+
+    t.volume = 1;
+    t.mute = false;
+    t.solo = false;
+
+    div.innerHTML = `
+      <div class="strip-row">
+      <div class="fader-col">
+
+        <label>${t.name}</label>
+
+        <input type="range"
+          class="vertical"
+          min="0" max="1" step="0.01"
+          value="1"
+          oninput="setVolume(${i}, this.value)">
+
+        <button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">Mute</button>
+        <button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">Solo</button>
+
+      </div>
+
+      <canvas id="vu-${i}" class="vu" width="12" height="140"></canvas>
       </div>
     `;
 
@@ -216,22 +236,11 @@ function buildUI() {
   });
 }
 
-/* ---------------- AUDIO ---------------- */
-
 function initAudio() {
-
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
   masterGain = audioCtx.createGain();
   masterGain.connect(audioCtx.destination);
-
-  const masterAnalyser = audioCtx.createAnalyser();
-  masterAnalyser.fftSize = 1024;
-
-  masterGain.connect(masterAnalyser);
-  masterAnalyser.connect(audioCtx.destination);
-
-  window.masterAnalyser = masterAnalyser;
 
   tracks.forEach((t, i) => {
 
@@ -239,10 +248,11 @@ function initAudio() {
 
     const source = audioCtx.createMediaElementSource(audio);
     const gain = audioCtx.createGain();
+
+
     const analyser = audioCtx.createAnalyser();
-
     analyser.fftSize = 512;
-
+    
     t.audio = audio;
     t.gain = gain;
     t.analyser = analyser;
@@ -254,28 +264,35 @@ function initAudio() {
     audio.addEventListener("loadedmetadata", () => {
       duration = Math.max(duration, audio.duration);
       document.getElementById("scrubber").max = duration;
+
+    const masterAnalyser = audioCtx.createAnalyser();
+masterAnalyser.fftSize = 1024;
+
+masterGain.connect(masterAnalyser);
+masterAnalyser.connect(audioCtx.destination);
+
+window.masterAnalyser = masterAnalyser;
+      
     });
   });
 }
 
-/* ---------------- MIX ---------------- */
-
 function updateMix() {
-
   const anySolo = tracks.some(t => t.solo);
 
   tracks.forEach(t => {
-
     let level = t.volume;
 
-    if (anySolo && !t.solo) level = 0;
-    if (t.mute) level = 0;
-
-    if (t.gain) {
-      t.gain.gain.value = level;
+    if (anySolo) {
+      level = t.solo ? level : 0;
     }
-  });
 
+    if (t.mute) {
+      level = 0;
+    }
+
+    t.gain.gain.value = level;
+  });
   updateButtonUI();
 }
 
@@ -284,40 +301,33 @@ function setVolume(i, v) {
   updateMix();
 }
 
-/* ---------------- BUTTONS ---------------- */
-
 function toggleMute(i) {
   tracks[i].mute = !tracks[i].mute;
+
+  const btn = document.getElementById(`mute-${i}`);
+  btn.classList.toggle("muted", tracks[i].mute);
+
   updateMix();
+  updateButtonUI();
 }
 
 function toggleSolo(i) {
   tracks[i].solo = !tracks[i].solo;
+
+  const btn = document.getElementById(`solo-${i}`);
+  btn.classList.toggle("solo", tracks[i].solo);
+
   updateMix();
+  updateButtonUI();
 }
 
-function updateButtonUI() {
-
-  const anySolo = tracks.some(t => t.solo);
-
-  tracks.forEach((t, i) => {
-
-    const muteBtn = document.getElementById(`mute-${i}`);
-    const soloBtn = document.getElementById(`solo-${i}`);
-
-    if (!muteBtn || !soloBtn) return;
-
-    muteBtn.classList.toggle("muted", t.mute);
-    soloBtn.classList.toggle("solo", t.solo);
-
-    muteBtn.classList.toggle("solo-muted", anySolo && !t.solo);
-  });
+function setMaster(v) {
+  if (masterGain) {
+    masterGain.gain.value = parseFloat(v);
+  }
 }
-
-/* ---------------- TRANSPORT ---------------- */
 
 function playAll() {
-
   if (!audioCtx) initAudio();
   audioCtx.resume();
 
@@ -330,53 +340,52 @@ function playAll() {
   });
 
   isPlaying = true;
-
-  updateMix();
   updateScrubber();
   drawVUMeters();
   drawMasterVU();
 }
 
 function pauseAll() {
-
   tracks.forEach(t => t.audio.pause());
 
   pauseTime = audioCtx.currentTime - startTime;
   isPlaying = false;
 }
 
-/* ---------------- SCRUBBER ---------------- */
-
-function seekAll(v) {
-
-  if (!audioCtx) return;
-
-  const t = parseFloat(v);
-  pauseTime = t;
-
-  tracks.forEach(tr => tr.audio.currentTime = t);
-
-  if (isPlaying) {
-    startTime = audioCtx.currentTime - t;
-  }
-}
-
 function updateScrubber() {
-
   if (!isPlaying) return;
 
   const scrubber = document.getElementById("scrubber");
+
   const current = audioCtx.currentTime - startTime;
 
   scrubber.value = Math.min(current, duration);
 
   requestAnimationFrame(updateScrubber);
 }
+  
+function updateButtonUI() {
+  const anySolo = tracks.some(t => t.solo);
 
-/* ---------------- VU METERS ---------------- */
+  tracks.forEach((t, i) => {
+    const muteBtn = document.getElementById(`mute-${i}`);
 
+    if (!muteBtn) return;
+
+    muteBtn.classList.remove("muted", "solo-muted");
+
+    if (t.mute) {
+      muteBtn.classList.add("muted");
+      return;
+    }
+
+    if (anySolo && !t.solo) {
+      muteBtn.classList.add("solo-muted");
+    }
+  });
+}
+  
 function drawVUMeters() {
-
   tracks.forEach((t, i) => {
 
     if (!t.analyser) return;
@@ -397,6 +406,7 @@ function drawVUMeters() {
     }
 
     const rms = Math.sqrt(sum / data.length);
+
     const level = Math.min(rms * 3.5, 1);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -406,14 +416,15 @@ function drawVUMeters() {
       level > 0.5 ? "#f1c40f" :
                     "#2ecc71";
 
-    ctx.fillRect(0, canvas.height - level * canvas.height, 12, level * canvas.height);
+    const h = level * canvas.height;
+
+    ctx.fillRect(0, canvas.height - h, canvas.width, h);
   });
 
   requestAnimationFrame(drawVUMeters);
 }
 
 function drawMasterVU() {
-
   if (!window.masterAnalyser) return;
 
   const canvas = document.getElementById("masterVu");
@@ -432,6 +443,7 @@ function drawMasterVU() {
   }
 
   const rms = Math.sqrt(sum / data.length);
+
   const level = Math.min(rms * 3.5, 1);
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -441,17 +453,27 @@ function drawMasterVU() {
     level > 0.55 ? "#f1c40f" :
                    "#2ecc71";
 
-  ctx.fillRect(0, canvas.height - level * canvas.height, 12, level * canvas.height);
+  ctx.fillRect(0, 0, level * canvas.width, canvas.height);
 
   requestAnimationFrame(drawMasterVU);
 }
 
-/* ---------------- MASTER ---------------- */
+  
+function seekAll(v) {
+  if (!audioCtx) return;
 
-function setMaster(v) {
-  if (masterGain) {
-    masterGain.gain.value = parseFloat(v);
+  const t = parseFloat(v);
+
+  pauseTime = t;
+
+  tracks.forEach(tr => {
+    tr.audio.currentTime = t;
+  });
+
+  if (isPlaying) {
+    startTime = audioCtx.currentTime - t;
   }
+  
 }
 
 </script>

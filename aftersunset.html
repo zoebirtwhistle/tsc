@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>After Sunset</title>
+<style>
+  body {
+    font-family: sans-serif;
+    max-width: 800px;
+    margin: 40px auto;
+  }
+
+  .channel {
+    margin-bottom: 20px;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  input[type=range] {
+    width: 100%;
+  }
+
+  .controls {
+    margin: 20px 0;
+  }
+
+  button {
+    padding: 10px 15px;
+    margin-right: 10px;
+  }
+</style>
+</head>
+
+<body>
+<p></p><a href="index.html">Back</a></p>
+<h1>Smyth – After Sunset</h1>
+
+  <div class="controls">
+
+  <button onclick="playAll()">Play</button>
+  <button onclick="pauseAll()">Pause</button>
+
+  <br><br>
+
+  <label>Master Volume</label>
+  <input type="range" id="master" min="0" max="1" step="0.01" value="1"
+         oninput="setMaster(this.value)">
+
+  <br><br>
+
+  <label>Playback Position</label>
+  <input type="range" id="scrubber" min="0" max="1000" value="0"
+         oninput="seekAll(this.value)">
+</div>
+  
+<div id="mixer"></div>
+
+<script>
+const tracks = [
+  { name: "Soprano", file: "assop.mp3" },
+  { name: "Alto", file: "asalto.mp3" },
+  { name: "Tenor", file: "astenor.mp3" },
+  { name: "Bass", file: "asbass.mp3" },
+  { name: "Piano", file: "aspiano.mp3" }
+];
+
+let audioCtx;
+let sources = [];
+let gains = [];
+let masterGain;
+let duration = 0;
+let isPlaying = false;
+let startTime = 0;
+let pauseTime = 0;
+
+function initAudio() {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.connect(audioCtx.destination);
+  
+  tracks.forEach((track, i) => {
+    const audio = new Audio(track.file);
+    audio.crossOrigin = "anonymous";
+
+    const source = audioCtx.createMediaElementSource(audio);
+    const gainNode = audioCtx.createGain();
+
+    source.connect(gainNode);
+    gainNode.connect(masterGain);
+
+    sources.push(audio);
+    gains.push(gainNode);
+
+    createFader(track.name, i);
+  });
+}
+function setMaster(value) {
+  if (masterGain) {
+    masterGain.gain.value = value;
+  }
+}
+
+function playAll() {
+  if (!audioCtx) initAudio();
+
+  audioCtx.resume();
+
+  const offset = pauseTime || 0;
+  startTime = audioCtx.currentTime - offset;
+
+  sources.forEach(audio => {
+    audio.currentTime = offset;
+    audio.play();
+  });
+
+  isPlaying = true;
+  updateScrubber();
+}
+
+  
+function createFader(name, index) {
+  const container = document.createElement("div");
+  container.className = "channel";
+
+  container.innerHTML = `
+    <label>${name}</label>
+    <input type="range" min="0" max="1" step="0.01" value="1"
+      oninput="setGain(${index}, this.value)">
+  `;
+
+  document.getElementById("mixer").appendChild(container);
+}
+
+function setGain(index, value) {
+  gains[index].gain.value = value;
+}
+
+  function updateScrubber() {
+  if (!isPlaying) return;
+
+  const scrubber = document.getElementById("scrubber");
+
+  const current = audioCtx.currentTime - startTime;
+
+  scrubber.value = current * 100;
+
+  requestAnimationFrame(updateScrubber);
+}
+
+  function seekAll(value) {
+  if (!audioCtx) return;
+
+  const time = value / 100;
+
+  pauseTime = time;
+
+  sources.forEach(audio => {
+    audio.currentTime = time;
+  });
+
+  if (isPlaying) {
+    startTime = audioCtx.currentTime - time;
+  }
+}
+
+function playAll() {
+  if (!audioCtx) initAudio();
+  audioCtx.resume();
+  sources.forEach(a => a.play());
+}
+
+function pauseAll() {
+  sources.forEach(audio => audio.pause());
+
+  pauseTime = audioCtx.currentTime - startTime;
+  isPlaying = false;
+}
+  
+</script>
+
+</body>
+</html>

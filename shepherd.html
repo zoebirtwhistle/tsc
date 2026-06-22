@@ -228,7 +228,6 @@ function initAudio() {
     
     t.audio = audio;
     t.gain = gain;
-    t.gain.gain.value = t.volume
     t.analyser = analyser;
 
     source.connect(gain);
@@ -318,7 +317,7 @@ function playAll() {
   isPlaying = true;
   updateScrubber();
   drawVUMeters();
-  drawMasterVU();
+  updateMix();
 }
 
 function pauseAll() {

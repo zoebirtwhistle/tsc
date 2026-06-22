@@ -44,7 +44,6 @@
   <button onclick="playAll()">Play</button>
   <button onclick="pauseAll()">Pause</button>
  
-
   <br><br>
 
   <label>Master Volume</label>
@@ -79,18 +78,12 @@ let startTime = 0;
 let pauseTime = 0;
 let duration = 0;
 
-// --------------------
-// UI BUILDS IMMEDIATELY
-// --------------------
 window.addEventListener("DOMContentLoaded", buildUI);
 
 function buildUI() {
   tracks.forEach((t, i) => createFader(t.name, i));
 }
 
-// --------------------
-// AUDIO INIT
-// --------------------
 function initAudio() {
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -116,15 +109,12 @@ function initAudio() {
   });
 }
 
-// --------------------
-// FADERS
-// --------------------
 function createFader(name, index) {
   const div = document.createElement("div");
   div.className = "channel";
 
   div.innerHTML = `
-    <label>${name}</label>
+    <label>${name} volume</label>
     <input type="range" min="0" max="1" step="0.01" value="1"
       oninput="setGain(${index}, this.value)">
   `;
@@ -136,16 +126,10 @@ function setGain(i, v) {
   if (gains[i]) gains[i].gain.value = v;
 }
 
-// --------------------
-// MASTER VOLUME
-// --------------------
 function setMaster(v) {
   if (masterGain) masterGain.gain.value = v;
 }
 
-// --------------------
-// PLAYBACK
-// --------------------
 function playAll() {
   if (!audioCtx) initAudio();
 
@@ -170,9 +154,6 @@ function pauseAll() {
   isPlaying = false;
 }
 
-// --------------------
-// SCRUBBER]
-// --------------------
 function updateScrubber() {
   if (!isPlaying) return;
 

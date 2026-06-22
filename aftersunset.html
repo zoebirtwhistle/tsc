@@ -41,9 +41,15 @@ button {
 
 .channel {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  margin: 10px;
+  margin: 8px;
+}
+
+.strip-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .fader {
@@ -57,12 +63,15 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 6px;
 }
 
  .vu {
   width: 12px;
   height: 140px;
   background: #222;
+  margin-left: 2px;
+  margin-right: 0;
 }
 
 input[type=range].vertical {
@@ -164,61 +173,64 @@ function buildUI() {
 
   tracks.forEach((t, i) => {
 
+    const div = document.createElement("div");
+    div.className = "channel";
+
+    // -------------------
+    // MASTER STRIP
+    // -------------------
     if (t.name === "MASTER") {
-      const div = document.createElement("div");
-      div.className = "channel";
 
       div.innerHTML = `
-        <label>MASTER</label>
- <div class="fader-col">
+        <div class="strip-row">
+        <div class="fader-col">
 
-    <label>${t.name}</label>
+          <label>MASTER</label>
 
-    <input type="range"
-      class="vertical"
-      min="0" max="1" step="0.01"
-      value="1"
-      oninput="setVolume(${i}, this.value)">
+          <input type="range"
+            class="vertical"
+            min="0" max="1" step="0.01"
+            value="1"
+            oninput="setMaster(this.value)">
 
-    <button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">M</button>
-    <button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">S</button>
+       
 
-  </div>
-
-  <canvas id="masterVu" width="12" height="140"></canvas>
-`;
+        <canvas id="masterVu" class="vu" width="12" height="140"></canvas>
+         </div>
+      `;
 
       mixer.appendChild(div);
       return;
     }
-    
+
+    // -------------------
+    // NORMAL CHANNELS
+    // -------------------
+
     t.volume = 1;
     t.mute = false;
     t.solo = false;
 
-    const div = document.createElement("div");
-    div.className = "channel";
-
     div.innerHTML = `
-      <label>${t.name}</label>
+      <div class="strip-row">
+      <div class="fader-col">
 
- <div class="fader-col">
+        <label>${t.name}</label>
 
-    <label>${t.name}</label>
+        <input type="range"
+          class="vertical"
+          min="0" max="1" step="0.01"
+          value="1"
+          oninput="setVolume(${i}, this.value)">
 
-    <input type="range"
-      class="vertical"
-      min="0" max="1" step="0.01"
-      value="1"
-      oninput="setVolume(${i}, this.value)">
+        <button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">M</button>
+        <button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">S</button>
 
-    <button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">M</button>
-    <button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">S</button>
+      </div>
 
-  </div>
-
-  <canvas id="vu-${i}" class="vu" width="12" height="140"></canvas>
-`;
+      <canvas id="vu-${i}" class="vu" width="12" height="140"></canvas>
+      </div>
+    `;
 
     mixer.appendChild(div);
   });

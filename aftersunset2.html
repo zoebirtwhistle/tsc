@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>After Sunset – Mixer</title>
+
+<style>
+body {
+  font-family: sans-serif;
+  max-width: 900px;
+  margin: 40px auto;
+  text-align: center;
+}
+
+#scrubber {
+  width: 100%;
+  max-width: 600px;
+}
+
+.scrubber-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+}
+
+button {
+  padding: 10px 14px;
+  margin: 5px;
+}
+
+#mixer {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 30px;
+}
+
+.channel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.fader-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+input[type=range].vertical {
+  transform: rotate(-90deg);
+  width: 140px;
+  height: 20px;
+  margin: 60px 0;
+}
+
+.button-row {
+  display: flex;
+  gap: 4px;
+}
+
+.smallbtn {
+  width: 52px;
+  font-size: 11px;
+  background: #eee;
+  border: 1px solid #aaa;
+  cursor: pointer;
+}
+
+.smallbtn.muted {
+  background: #2ecc71;
+  color: white;
+}
+
+.smallbtn.solo {
+  background: #f1c40f;
+  color: black;
+}
+
+.smallbtn.solo-muted {
+  background: #2ecc71;
+  opacity: 0.5;
+  color: white;
+}
+
+.vu {
+  width: 12px;
+  height: 140px;
+  background: #222;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Ethel Smyth – After Sunset</h1>
+
+<button onclick="playAll()">Play</button>
+<button onclick="pauseAll()">Pause</button>
+
+<div class="scrubber-block">
+  <label>Playback Position</label>
+  <input type="range" id="scrubber" min="0" max="1" step="0.01"
+         oninput="seekAll(this.value)">
+</div>
+
+<div id="mixer"></div>
+
+<script>
+
+const tracks = [
+  { name: "Soprano", file: "assop.mp3" },
+  { name: "Alto", file: "asalto.mp3" },
+  { name: "Tenor", file: "astenor.mp3" },
+  { name: "Bass", file: "asbass.mp3" },
+  { name: "Piano", file: "aspiano.mp3" }
+];
+
+const DEFAULT_VOL = 0.8;
+
+let audioCtx;
+let masterGain;
+let duration = 0;
+
+let isPlaying = false;
+let startTime = 0;
+let pauseTime = 0;
+
+window.addEventListener("DOMContentLoaded", buildUI);
+
+/* ---------------- UI ---------------- */
+
+function buildUI() {
+  const mixer = document.getElementById("mixer");
+
+  tracks.forEach((t, i) => {
+
+    t.volume = DEFAULT_VOL;
+    t.mute = false;
+    t.solo = false;
+
+    const div = document.createElement("div");
+    div.className = "channel";
+
+    div.innerHTML = `
+      <div class="fader-col">
+
+        <label>${t.name}</label>
+
+        <input type="range"
+          class="vertical"
+          min="0" max="1" step="0.01"
+          value="${DEFAULT_VOL}"
+          oninput="setVolume(${i}, this.value)">
+
+        <div class="button-row">
+          <button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">Mute</button>
+          <button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">Solo</button>
+        </div>
+
+      </div>
+    `;
+
+    mixer.appendChild(div);
+  });
+}
+
+/* ---------------- AUDIO ---------------- */
+
+function initAudio() {
+
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  masterGain = audioCtx.createGain();
+  masterGain.connect(audioCtx.destination);
+
+  tracks.forEach((t) => {
+
+    const audio = new Audio(t.file);
+
+    const source = audioCtx.createMediaElementSource(audio);
+    const gain = audioCtx.createGain();
+    const analyser = audioCtx.createAnalyser();
+
+    analyser.fftSize = 512;
+
+    t.audio = audio;
+    t.gain = gain;
+    t.analyser = analyser;
+
+    source.connect(gain);
+    gain.connect(analyser);
+    analyser.connect(masterGain);
+
+    audio.addEventListener("loadedmetadata", () => {
+      duration = Math.max(duration, audio.duration);
+      document.getElementById("scrubber").max = duration;
+    });
+  });
+
+  applyAudioState(); // IMPORTANT
+}
+
+/* ---------------- SINGLE SOURCE OF TRUTH ---------------- */
+
+function applyAudioState() {
+
+  const anySolo = tracks.some(t => t.solo);
+
+  tracks.forEach(t => {
+
+    let level = t.volume;
+
+    if (anySolo) {
+      level = t.solo ? level : 0;
+    }
+
+    if (t.mute) {
+      level = 0;
+    }
+
+    if (t.gain) {
+      t.gain.gain.value = level;
+    }
+  });
+
+  updateButtonUI();
+}
+
+/* ---------------- CONTROLS ---------------- */
+
+function setVolume(i, v) {
+  tracks[i].volume = parseFloat(v);
+  applyAudioState();
+}
+
+function toggleMute(i) {
+  tracks[i].mute = !tracks[i].mute;
+  applyAudioState();
+}
+
+function toggleSolo(i) {
+  tracks[i].solo = !tracks[i].solo;
+  applyAudioState();
+}
+
+/* ---------------- PLAYBACK ---------------- */
+
+function playAll() {
+
+  if (!audioCtx) initAudio();
+
+  applyAudioState(); // safety re-sync
+
+  audioCtx.resume();
+
+  const offset = pauseTime || 0;
+  startTime = audioCtx.currentTime - offset;
+
+  tracks.forEach(t => {
+    t.audio.currentTime = offset;
+    t.audio.play();
+  });
+
+  isPlaying = true;
+  updateScrubber();
+}
+
+function pauseAll() {
+
+  tracks.forEach(t => t.audio.pause());
+
+  pauseTime = audioCtx.currentTime - startTime;
+  isPlaying = false;
+}
+
+/* ---------------- SCRUBBER ---------------- */
+
+function seekAll(v) {
+
+  if (!audioCtx) return;
+
+  const t = parseFloat(v);
+
+  pauseTime = t;
+
+  tracks.forEach(tr => tr.audio.currentTime = t);
+
+  if (isPlaying) {
+    startTime = audioCtx.currentTime - t;
+  }
+}
+
+function updateScrubber() {
+
+  if (!isPlaying) return;
+
+  const scrubber = document.getElementById("scrubber");
+
+  const current = audioCtx.currentTime - startTime;
+  scrubber.value = Math.min(current, duration);
+
+  requestAnimationFrame(updateScrubber);
+}
+
+/* ---------------- UI STATE ---------------- */
+
+function updateButtonUI() {
+
+  const anySolo = tracks.some(t => t.solo);
+
+  tracks.forEach((t, i) => {
+
+    const muteBtn = document.getElementById(`mute-${i}`);
+    const soloBtn = document.getElementById(`solo-${i}`);
+
+    if (!muteBtn || !soloBtn) return;
+
+    muteBtn.classList.toggle("muted", t.mute);
+    soloBtn.classList.toggle("solo", t.solo);
+
+    muteBtn.classList.toggle("solo-muted", anySolo && !t.solo);
+  });
+}
+
+</script>
+
+</body>
+</html>

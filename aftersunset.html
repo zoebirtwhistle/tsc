@@ -59,7 +59,12 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
+}
+  .button-row {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
 }
 
  .vu {
@@ -81,14 +86,9 @@ label {
   font-size: 14px;
   margin-bottom: 5px;
 }
-.smallbtn {
-  width: 40px;
-  margin-top: 5px;
-  font-size: 12px;
-}
 
 .smallbtn {
-  width: 40px;
+  width: 30px;
   margin-top: 5px;
   font-size: 12px;
   background: #eee;
@@ -219,8 +219,10 @@ function buildUI() {
           value="1"
           oninput="setVolume(${i}, this.value)">
 
+        <div class="button-row">
         <button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">M</button>
         <button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">S</button>
+        </div>
 
       </div>
 

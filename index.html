@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Choir Mixer</title>
+<style>
+  body {
+    font-family: sans-serif;
+    max-width: 800px;
+    margin: 40px auto;
+  }
+
+  .channel {
+    margin-bottom: 20px;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  input[type=range] {
+    width: 100%;
+  }
+
+  .controls {
+    margin: 20px 0;
+  }
+
+  button {
+    padding: 10px 15px;
+    margin-right: 10px;
+  }
+</style>
+</head>
+
+<body>
+
+<h1>Choir Rehearsal Mixer</h1>
+
+<div class="controls">
+  <button onclick="playAll()">Play</button>
+  <button onclick="pauseAll()">Pause</button>
+</div>
+
+<div id="mixer"></div>
+
+<script>
+const tracks = [
+  { name: "Soprano", file: "soprano.wav" },
+  { name: "Alto", file: "alto.wav" },
+  { name: "Tenor", file: "tenor.wav" },
+  { name: "Bass", file: "bass.wav" },
+  { name: "Piano", file: "piano.wav" }
+];
+
+let audioCtx;
+let sources = [];
+let gains = [];
+
+function initAudio() {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  tracks.forEach((track, i) => {
+    const audio = new Audio(track.file);
+    audio.crossOrigin = "anonymous";
+
+    const source = audioCtx.createMediaElementSource(audio);
+    const gainNode = audioCtx.createGain();
+
+    source.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    sources.push(audio);
+    gains.push(gainNode);
+
+    createFader(track.name, i);
+  });
+}
+
+function createFader(name, index) {
+  const container = document.createElement("div");
+  container.className = "channel";
+
+  container.innerHTML = `
+    <label>${name}</label>
+    <input type="range" min="0" max="1" step="0.01" value="1"
+      oninput="setGain(${index}, this.value)">
+  `;
+
+  document.getElementById("mixer").appendChild(container);
+}
+
+function setGain(index, value) {
+  gains[index].gain.value = value;
+}
+
+function playAll() {
+  if (!audioCtx) initAudio();
+  audioCtx.resume();
+  sources.forEach(a => a.play());
+}
+
+function pauseAll() {
+  sources.forEach(a => a.pause());
+}
+</script>
+
+</body>
+</html>

@@ -91,6 +91,8 @@ input[type=range].vertical {
   width: 12px;
   height: 140px;
   background: #222;
+  border-radius: 2px;
+  overflow: hidden;
 }
 </style>
 </head>
@@ -161,7 +163,9 @@ function buildUI() {
           <button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">Mute</button>
           <button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">Solo</button>
         </div>
-
+        
+        <canvas id="vu-${i}" width="12" height="140" class="vu"></canvas>
+      
       </div>
     `;
 
@@ -183,15 +187,15 @@ function initAudio() {
     const audio = new Audio(t.file);
 
     const source = audioCtx.createMediaElementSource(audio);
+
     const gain = audioCtx.createGain();
     const analyser = audioCtx.createAnalyser();
 
-    analyser.fftSize = 512;
+    analyser.fftSize = 1024;
 
     t.audio = audio;
     t.gain = gain;
     t.analyser = analyser;
-
     source.connect(gain);
     gain.connect(analyser);
     analyser.connect(masterGain);
@@ -202,7 +206,8 @@ function initAudio() {
     });
   });
 
-  applyAudioState(); // IMPORTANT
+  applyAudioState();
+  drawVUMeters();
 }
 
 /* ---------------- SINGLE SOURCE OF TRUTH ---------------- */
@@ -254,7 +259,7 @@ function playAll() {
 
   if (!audioCtx) initAudio();
 
-  applyAudioState(); // safety re-sync
+  applyAudioState();
 
   audioCtx.resume();
 
@@ -268,6 +273,7 @@ function playAll() {
 
   isPlaying = true;
   updateScrubber();
+
 }
 
 function pauseAll() {
@@ -325,6 +331,53 @@ function updateButtonUI() {
 
     muteBtn.classList.toggle("solo-muted", anySolo && !t.solo);
   });
+}
+
+/* ---------------- METERS ---------------- */
+  
+function drawVUMeters() {
+
+  if (!audioCtx) {
+    requestAnimationFrame(drawVUMeters);
+    return;
+  }
+
+  tracks.forEach((t, i) => {
+
+    if (!t.analyser) return;
+
+    const canvas = document.getElementById(`vu-${i}`);
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+
+    const data = new Uint8Array(t.analyser.fftSize);
+    t.analyser.getByteTimeDomainData(data);
+
+    let sum = 0;
+
+    for (let j = 0; j < data.length; j++) {
+      const v = (data[j] - 128) / 128;
+      sum += v * v;
+    }
+
+    const rms = Math.sqrt(sum / data.length);
+
+    const level = Math.min(rms * 6, 1);
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle =
+      level > 0.8 ? "#e74c3c" :
+      level > 0.5 ? "#f1c40f" :
+                    "#2ecc71";
+
+    const h = level * canvas.height;
+
+    ctx.fillRect(0, canvas.height - h, canvas.width, h);
+  });
+
+  requestAnimationFrame(drawVUMeters);
 }
 
 </script>

@@ -28,7 +28,17 @@ body {
 button {
   padding: 10px 14px;
   margin: 5px;
-  font-size: 12px;
+  border: 1px solid #aaa;
+  background: #eee;
+  cursor: pointer;
+  box-shadow: 2px 2px 0px #bbb;
+  transition: all 0.05s ease;
+}
+
+button.active {
+  background: #ddd;
+  box-shadow: inset 2px 2px 4px rgba(0,0,0,0.2);
+  transform: translate(1px, 1px);
 }
 
 #mixer {
@@ -127,8 +137,8 @@ input[type=range].vertical {
 
 <div class="controls">
 
-  <button onclick="playAll()">Play ▶</button>
-  <button onclick="pauseAll()">Pause ⏸</button>
+<button id="playBtn" onclick="playAll()">▶ Play</button>
+<button id="pauseBtn" onclick="pauseAll()">⏸ Pause</button>
 <button onclick="window.location.href='theshepherd/The Shepherd SATB.pdf'">
   Download score
 </button>
@@ -275,12 +285,23 @@ function toggleSolo(i) {
   tracks[i].solo = !tracks[i].solo;
   applyAudioState();
 }
+function updateTransportUI() {
+  const playBtn = document.getElementById("playBtn");
+  const pauseBtn = document.getElementById("pauseBtn");
+
+  if (!playBtn || !pauseBtn) return;
+
+  playBtn.classList.toggle("active", isPlaying);
+  pauseBtn.classList.toggle("active", !isPlaying);
+}
 
 function playAll() {
 
   if (!audioCtx) initAudio();
 
   applyAudioState();
+  isPlaying = true;
+  updateTransportUI();
 
   audioCtx.resume();
 
@@ -299,6 +320,9 @@ function playAll() {
 
 function pauseAll() {
 
+  isPlaying = false;
+  updateTransportUI();
+  
   tracks.forEach(t => t.audio.pause());
 
   pauseTime = audioCtx.currentTime - startTime;

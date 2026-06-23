@@ -40,8 +40,8 @@ button {
 
 .channel {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto 140px auto;
+  grid-template-columns: max-content max-content;
+  grid-template-rows: auto 120px auto;
   gap: 1px;
   justify-items: center;
   align-items: center;
@@ -79,13 +79,14 @@ button {
 
 input[type=range].vertical {
   transform: rotate(-90deg);
-  width: 140px;
+  width: 50px;
   height: 20px;
   margin: 10px 0;
 }
 
 .smallbtn {
-  width: 52px;
+  width: auto;
+  padding: 2px 6px;
   font-size: 11px;
   background: #eee;
   border: 1px solid #aaa;

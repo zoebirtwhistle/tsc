@@ -120,6 +120,26 @@ input[type=range].vertical {
 
 <body>
 
+<p><a href="index.html"><b>Back</b></a></p>
+<h1>Ethel Smyth – <i>After Sunset</i></h1>
+
+<div class="controls">
+
+  <button onclick="playAll()">Play</button>
+  <button onclick="pauseAll()">Pause</button>
+<button><a href="Smyth - After Sunset SATB Vocal Score.pdf">Download score</a></button>
+  <br><br>
+
+<div class="scrubber-block">
+  <label>Playback Position</label><br>
+  <input type="range" id="scrubber"
+         min="0" max="1" step="0.01" value="0"
+         oninput="seekAll(this.value)">
+</div>
+  
+</div>
+
+<div id="mixer"></div>
 <h1>Ethel Smyth – <i>After Sunset</i></h1>
 
 <button onclick="playAll()">Play</button>

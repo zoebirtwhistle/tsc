@@ -33,22 +33,48 @@ button {
 #mixer {
   display: flex;
   justify-content: center;
-  gap: 18px;
+  gap: 12px;
   flex-wrap: wrap;
   margin-top: 30px;
 }
 
 .channel {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 170px auto;
+  gap: 6px;
+  justify-items: center;
   align-items: center;
+
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
 }
 
-.fader-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  .track-name {
+  grid-column: 1 / 3;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.fader {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.meter {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.mute-btn {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.solo-btn {
+  grid-column: 2;
+  grid-row: 3;
 }
 
 input[type=range].vertical {
@@ -56,11 +82,6 @@ input[type=range].vertical {
   width: 140px;
   height: 20px;
   margin: 60px 0;
-}
-
-.button-row {
-  display: flex;
-  gap: 4px;
 }
 
 .smallbtn {
@@ -149,26 +170,24 @@ function buildUI() {
     div.className = "channel";
 
     div.innerHTML = `
-      <div class="fader-col">
+  <div class="track-name">${t.name}</div>
 
-        <label>${t.name}</label>
+  <input class="vertical fader"
+    type="range"
+    min="0" max="1" step="0.01"
+    value="${DEFAULT_VOL}"
+    oninput="setVolume(${i}, this.value)">
 
-        <input type="range"
-          class="vertical"
-          min="0" max="1" step="0.01"
-          value="${DEFAULT_VOL}"
-          oninput="setVolume(${i}, this.value)">
+  <canvas id="vu-${i}" class="vu meter" width="12" height="140"></canvas>
 
-        <div class="button-row">
-          <button class="smallbtn" id="mute-${i}" onclick="toggleMute(${i})">Mute</button>
-          <button class="smallbtn" id="solo-${i}" onclick="toggleSolo(${i})">Solo</button>
-        </div>
-        
-        <canvas id="vu-${i}" width="12" height="140" class="vu"></canvas>
-      
-      </div>
-    `;
+<button class="smallbtn mute-btn" id="mute-${i}" onclick="toggleMute(${i})">
+  Mute
+</button>
 
+<button class="smallbtn solo-btn" id="solo-${i}" onclick="toggleSolo(${i})">
+  Solo
+</button>
+`;
     mixer.appendChild(div);
   });
 }

@@ -185,11 +185,14 @@ let pauseTime = 0;
 let tracksReady = 0;
 let allReady = false;
 
+let vuAnimation = null;
+
 let transport = "loading"; // loading | ready | playing | paused
 
 let syncInterval = null;
-const SYNC_THRESHOLD = 0.02; // 20ms (when we start correcting)
-const MAX_RATE_ADJUST = 0.01; // very subtle (1%)
+const SYNC_THRESHOLD = 0.02;
+const MAX_RATE_ADJUST = 0.01;
+const SYNC_INTERVAL_MS = 200;
 
 window.addEventListener("DOMContentLoaded", buildUI);
 
@@ -254,8 +257,10 @@ function initAudio() {
     gain.connect(analyser);
     analyser.connect(masterGain);
 
-    // readiness tracking (IMPORTANT)
     audio.addEventListener("loadedmetadata", () => {
+
+    duration = Math.max(duration, audio.duration);
+    document.getElementById("scrubber").max = duration;
 
       tracksReady++;
 
@@ -343,9 +348,11 @@ function playAll() {
   t.audio.playbackRate = 1.0;
   t.audio.play();
 });
+vuAnimation = requestAnimationFrame(drawVUMeters);
 
   isPlaying = true;
   transport = "playing";
+  updateTransportUI()
   
   if (syncInterval) clearInterval(syncInterval);
   syncInterval = setInterval(syncTracks, SYNC_INTERVAL_MS);
@@ -366,6 +373,7 @@ function pauseAll() {
   isPlaying = false;
 
   transport = "paused";
+  updateTransportUI()
 
   if (syncInterval) {
   clearInterval(syncInterval);
@@ -428,7 +436,8 @@ function syncTracks() {
   if (!isPlaying) return;
   if (!tracks[0]?.audio) return;
 
-  const reference = tracks[0].audio.currentTime;
+  const referenceTrack = tracks.find(t => t.audio);
+  const reference = referenceTrack?.audio.currentTime;
 
   for (let i = 1; i < tracks.length; i++) {
 
@@ -455,11 +464,6 @@ function syncTracks() {
 
 function drawVUMeters() {
 
-  if (!audioCtx) {
-    requestAnimationFrame(drawVUMeters);
-    return;
-  }
-
   tracks.forEach((t, i) => {
 
     if (!t.analyser) return;
@@ -469,7 +473,7 @@ function drawVUMeters() {
 
     const ctx = canvas.getContext("2d");
 
-    const data = new Uint8Array(t.analyser.fftSize);
+    const data = t.timeData;
     t.analyser.getByteTimeDomainData(data);
 
     let sum = 0;
@@ -480,7 +484,6 @@ function drawVUMeters() {
     }
 
     const rms = Math.sqrt(sum / data.length);
-
     const level = Math.max(rms * 8, 0.02);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -490,12 +493,10 @@ function drawVUMeters() {
       level > 0.5 ? "#f1c40f" :
                     "#2ecc71";
 
-    const h = level * canvas.height;
-
-    ctx.fillRect(0, canvas.height - h, canvas.width, h);
+    ctx.fillRect(0, canvas.height - level * canvas.height, canvas.width, level * canvas.height);
   });
 
-  requestAnimationFrame(drawVUMeters);
+  vuAnimation = requestAnimationFrame(drawVUMeters);
 }
 
 </script>

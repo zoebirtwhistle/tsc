@@ -155,7 +155,6 @@ input[type=range].vertical {
 </div>
 
 <div id="mixer"></div>
-<p font-size: 11px>This tool is still a bit jank and occasionally the tracks get misaligned during playback. A <a href=".">page refresh</a> usually fixes the error.</p>
 
 <script>
 
@@ -173,6 +172,12 @@ let duration = 0;
 let isPlaying = false;
 let startTime = 0;
 let pauseTime = 0;
+
+let syncInterval = null;
+
+const SYNC_INTERVAL_MS = 200;
+const SYNC_THRESHOLD = 0.02;
+const MAX_RATE_ADJUST = 0.01;
 
 window.addEventListener("DOMContentLoaded", buildUI);
 
@@ -313,19 +318,24 @@ function playAll() {
   });
 
   isPlaying = true;
+  syncInterval = setInterval(syncTracks, SYNC_INTERVAL_MS);
   updateScrubber();
+  
 
 }
-
 function pauseAll() {
 
   isPlaying = false;
   updateTransportUI();
-  
+
   tracks.forEach(t => t.audio.pause());
 
+  if (syncInterval) {
+    clearInterval(syncInterval);
+    syncInterval = null;
+  }
+
   pauseTime = audioCtx.currentTime - startTime;
-  isPlaying = false;
 }
 
 function seekAll(v) {
@@ -418,6 +428,36 @@ function drawVUMeters() {
   requestAnimationFrame(drawVUMeters);
 }
 
+  function syncTracks() {
+
+  if (!isPlaying) return;
+  if (!tracks[0]?.audio) return;
+
+  const reference = tracks[0].audio.currentTime;
+
+  for (let i = 1; i < tracks.length; i++) {
+
+    const t = tracks[i];
+    if (!t.audio) continue;
+
+    const drift = t.audio.currentTime - reference;
+
+    if (Math.abs(drift) < SYNC_THRESHOLD) {
+      t.audio.playbackRate = 1.0;
+      continue;
+    }
+
+    const direction = drift > 0 ? -1 : 1;
+
+    const correction = Math.min(
+      MAX_RATE_ADJUST,
+      Math.abs(drift) * 0.5
+    );
+
+    t.audio.playbackRate = 1 + (direction * correction);
+  }
+}
+  
 </script>
 
 </body>

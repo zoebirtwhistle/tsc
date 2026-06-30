@@ -257,26 +257,41 @@ function initAudio() {
     gain.connect(analyser);
     analyser.connect(masterGain);
 
-    audio.addEventListener("loadedmetadata", () => {
+    audio.addEventListener("canplaythrough", () => {
+  if (t._ready) return;
+  t._ready = true;
 
-    duration = Math.max(duration, audio.duration);
-    document.getElementById("scrubber").max = duration;
+  tracksReady++;
 
-      tracksReady++;
+  duration = Math.max(duration, audio.duration);
+  document.getElementById("scrubber").max = duration;
 
-      if (tracksReady === tracks.length) {
+  if (tracksReady >= tracks.length) {
+    allReady = true;
+    transport = "ready";
 
-        allReady = true;
-        transport = "ready";
+    setTimeout(() => {
+  if (!allReady) {
+    console.warn("Forcing transport ready (timeout fallback)");
 
-        const playBtn = document.getElementById("playBtn");
-        if (playBtn) {
-          playBtn.disabled = false;
-          playBtn.textContent = "▶ Play";
-        }
+    allReady = true;
+    transport = "ready";
 
-      }
-    });
+    const playBtn = document.getElementById("playBtn");
+    if (playBtn) {
+      playBtn.disabled = false;
+      playBtn.textContent = "▶ Play";
+    }
+  }
+}, 5000);
+
+    const playBtn = document.getElementById("playBtn");
+    if (playBtn) {
+      playBtn.disabled = false;
+      playBtn.textContent = "▶ Play";
+    }
+  }
+});
 
   });
 
@@ -436,7 +451,7 @@ function syncTracks() {
   if (!isPlaying) return;
   if (!tracks[0]?.audio) return;
 
-  const referenceTrack = tracks.find(t => t.audio);
+  const reference = tracks[0]?.audio?.currentTime;
   const reference = referenceTrack?.audio.currentTime;
 
   for (let i = 1; i < tracks.length; i++) {
@@ -496,7 +511,7 @@ function drawVUMeters() {
     ctx.fillRect(0, canvas.height - level * canvas.height, canvas.width, level * canvas.height);
   });
 
-  vuAnimation = requestAnimationFrame(drawVUMeters);
+  requestAnimationFrame(drawVUMeters);
 }
 
 </script>
